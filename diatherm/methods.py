@@ -31,10 +31,15 @@ class MethodFile:
     def __init__(self, template_file):
         """Initialize the MethodFile"""
         self.template_file = Path(template_file)
-        with template_file.open() as fobj:
+        with self.template_file.open("rb") as fobj:
             self._file_obj = fobj.read()
 
-        self._stream, self.data = self._load_data()
+        self._stream, self._data = self._load_data()
+
+    @property
+    def data(self):
+        """The method data"""
+        return self._data.decode("utf16")
 
     def _load_data(self):
         """Load the template method data.
@@ -52,7 +57,7 @@ class MethodFile:
             ][0]
             # TODO: This currently only works for Exploris instruments...
             assert stream[0] == "TNG-Merkur"
-            data = ole.openstream(stream).read().decode("utf16")
+            data = ole.openstream(stream).read()
 
         return stream, data
 
@@ -69,13 +74,13 @@ class MethodFile:
         isolation_width : float
             The m/z width of the isolation windows.
         """
-        lines = self.data.splitlines(True)
+        lines = self._data.decode("utf16").splitlines(True)
         mass = utils.listify(mass)
         charge = utils.listify(charge)
 
         # Find the experiment
         ms2_idx = lines.index("\tExperiment Name = tMS2\r\n")
-        mass_start = lines.index(self.mass_list_start_key) + 1
+        mass_start = lines.index(self.mass_list_start_key) + 2
         mass_end = lines.index(self.mass_list_end_key)
 
         if len(mass) > (mass_end - mass_start):
@@ -86,20 +91,12 @@ class MethodFile:
         new_lines = lines[:ms2_idx]
         for line in lines[ms2_idx:mass_start]:
             # Update the isolation window width:
-            if line.starts_with(self.isolation_window_key):
-                line = re.sub(
-                    f"({self.isolation_window_key}).+(\r\n)",
-                    "\0" + str(isolation_width) + "\1",
-                    line,
-                )
+            if line.startswith(self.isolation_window_key):
+                line = self.isolation_window_key + f"{isolation_width:g}\r\n"
 
             # Update the number of DIA scans:
-            if line.starts_with(self.n_windows_key):
-                line = re.sub(
-                    f"({self.n_windows_key}).+(\r\n)",
-                    "\0" + str(len(mass)) + "\1",
-                    line,
-                )
+            if line.startswith(self.n_windows_key):
+                line = self.n_windows_key + f"{len(mass)}\r\n"
 
             new_lines.append(line)
 
@@ -112,7 +109,7 @@ class MethodFile:
         # Finish it:
         new_lines += lines[mass_end:]
         new_data = "".join(new_lines)
-        self.data = new_data.ljust(len(self.data))
+        self._data = new_data.encode("utf16").ljust(len(self._data), b"\0")
 
     def save(self, filename):
         """Save the updated method file.
@@ -128,11 +125,11 @@ class MethodFile:
             The output file.
         """
         filename = Path(filename)
-        with filename.open("w+") as out:
+        with filename.open("wb+") as out:
             out.write(self._file_obj)
 
         with olefile.OleFileIO(filename, write_mode=True) as ole:
-            ole.write_stream(self._stream, self.data)
+            ole.write_stream(self._stream, self._data)
 
         return filename
 
