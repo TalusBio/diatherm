@@ -9,16 +9,17 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 def create_random_methods(
-        n_windows,
-        charge=3,
-        width=4,
-        min_mz=399,
-        max_mz=1000,
-        n_methods=1,
-        file_root="diatherm",
-        output_dir="diatherm-out",
-        overwrite=False,
+    n_windows,
+    charge=3,
+    width=4,
+    min_mz=399,
+    max_mz=1000,
+    n_methods=1,
+    file_root="diatherm",
+    output_dir="diatherm-out",
+    overwrite=False,
 ):
     """Create the XML modification file for random DIA windows.
 
@@ -179,7 +180,7 @@ def main():
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Allow diatherm to write files to an existing directory."
+        help="Allow diatherm to write files to an existing directory.",
     )
 
     args = parser.parse_args()

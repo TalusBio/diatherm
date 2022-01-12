@@ -19,6 +19,7 @@ class MethodFile:
         A Thermo method file to use as a template for the DIA method.
         This should at least contain a tMS2 experiment for editing.
     """
+
     def __init__(self, method_file):
         """Initialize the MethodFile"""
         self._data = {}
@@ -49,8 +50,7 @@ class MethodFile:
             for lines in self.data.values():
                 for line in lines:
                     scan_line = re.search(
-                        r"\w*Number of Dependent Scans.*= (\d)",
-                        line
+                        r"\w*Number of Dependent Scans.*= (\d)", line
                     )
                     return int(scan_line.group(1))
 
