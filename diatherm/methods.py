@@ -1,7 +1,4 @@
-"""The MethodFile class.
-
-This class does the heavy lifting in the diatherm package.
-"""
+"""The MethodFile class."""
 import re
 from io import BytesIO
 from pathlib import Path
@@ -12,7 +9,7 @@ from . import utils
 
 
 class MethodFile:
-    """Read and modify a Thermo instrument method file.
+    """Read a Thermo instrument method file summary.
 
     These files are OLE2 files, with multiple streams.
 
@@ -22,24 +19,42 @@ class MethodFile:
         A Thermo method file to use as a template for the DIA method.
         This should at least contain a tMS2 experiment for editing.
     """
-
-    isolation_window_key = "\t\t\tIsolation Window (m/z) = "
-    n_windows_key = "\t\t\tN (Number of Spectra) = "
-    mass_list_start_key = ">>>>>>>>>>>>> Mass List Table <<<<<<<<<<<<<<\r\n"
-    mass_list_end_key = ">>>>>>>>>>>>> End Mass List Table <<<<<<<<<<<<<<\r\n"
-
-    def __init__(self, template_file):
+    def __init__(self, method_file):
         """Initialize the MethodFile"""
-        self.template_file = Path(template_file)
-        with self.template_file.open("rb") as fobj:
-            self._file_obj = fobj.read()
-
-        self._stream, self._data = self._load_data()
+        self._data = {}
+        self.method_file = Path(method_file)
+        self._load_data()
+        self._n_dependent_scans = None
 
     @property
     def data(self):
-        """The method data"""
-        return self._data.decode("utf16")
+        """The method summary data"""
+        return self._data
+
+    @property
+    def summary(self):
+        """A nice summary view of the method"""
+        summary = []
+        for section, data in self.data.items():
+            summary.append(f"SECTION: {section}")
+            summary.append("-" * (9 + len(section)))
+            summary += data
+
+        return "\n".join(summary)
+
+    @property
+    def n_dependent_scans(self):
+        """The number of dependent scans"""
+        if self._n_dependent_scans is None:
+            for lines in self.data.values():
+                for line in lines:
+                    scan_line = re.search(
+                        r"\w*Number of Dependent Scans.*= (\d)",
+                        line
+                    )
+                    return int(scan_line.group(1))
+
+        return None
 
     def _load_data(self):
         """Load the template method data.
@@ -51,106 +66,8 @@ class MethodFile:
         data : str
             The parsed instrument method.
         """
-        with olefile.OleFileIO(BytesIO(self._file_obj)) as ole:
-            stream = [
-                s for s in ole.listdir() if len(s) == 2 and s[1] == "Text"
-            ][0]
-            # TODO: This currently only works for Exploris instruments...
-            assert stream[0] == "TNG-Merkur"
-            data = ole.openstream(stream).read()
-
-        return stream, data
-
-    def update_windows(self, mass, charge=3, isolation_width=4):
-        """Update the DIA windows.
-
-        Parameters
-        ----------
-        mass : float or list of float
-            The center m/z of the DIA isolation windows.
-        charge : int or list of int
-            The assumed charge state for each DIA window. If an an int,
-            the charge is used for all windows.
-        isolation_width : float
-            The m/z width of the isolation windows.
-        """
-        lines = self._data.decode("utf16").splitlines(True)
-        mass = utils.listify(mass)
-        charge = utils.listify(charge)
-
-        # Find the experiment
-        ms2_idx = lines.index("\tExperiment Name = tMS2\r\n")
-        mass_start = lines.index(self.mass_list_start_key) + 2
-        mass_end = lines.index(self.mass_list_end_key)
-
-        if len(mass) > (mass_end - mass_start):
-            raise ValueError(
-                "The number of windows exceeds that in the template."
-            )
-
-        new_lines = lines[:ms2_idx]
-        for line in lines[ms2_idx:mass_start]:
-            # Update the isolation window width:
-            if line.startswith(self.isolation_window_key):
-                line = self.isolation_window_key + f"{isolation_width:g}\r\n"
-
-            # Update the number of DIA scans:
-            if line.startswith(self.n_windows_key):
-                line = self.n_windows_key + f"{len(mass)}\r\n"
-
-            new_lines.append(line)
-
-        # Update the mass list table.
-        if len(charge) == 1:
-            charge = charge * len(mass)
-
-        new_lines += [_make_row(mz, z) for mz, z in zip(mass, charge)]
-
-        # Finish it:
-        new_lines += lines[mass_end:]
-        new_data = "".join(new_lines)
-        self._data = new_data.encode("utf16").ljust(len(self._data), b"\0")
-
-    def save(self, filename):
-        """Save the updated method file.
-
-        Parameters
-        ----------
-        filename : str or Path
-            The method file to write.
-
-        Returns
-        -------
-        Path
-            The output file.
-        """
-        filename = Path(filename)
-        with filename.open("wb+") as out:
-            out.write(self._file_obj)
-
-        with olefile.OleFileIO(filename, write_mode=True) as ole:
-            ole.write_stream(self._stream, self._data)
-
-        return filename
-
-
-def _make_row(mass, charge):
-    """Create a row for the mass list table.
-
-    Parameters
-    ----------
-    mass : float
-        The ceter m/z of the isolation window.
-    charge : int
-        The assumed charge state.
-
-    Returns
-    -------
-    str
-        One formatted row for the table.
-    """
-    prefix = "               |               |    (no adduct)"
-    mass = f"{mass:15.4f}"
-    charge = f"{charge:15d}"
-    suffix = "\r\n"
-    return "|".join([prefix, mass, charge, suffix])
+        with olefile.OleFileIO(self.method_file) as ole:
+            for stream in ole.listdir():
+                if len(stream) == 2 and stream[1] == "Text":
+                    data = ole.openstream(stream).read().decode("utf16")
+                    self._data[stream[0]] = data.splitlines()
