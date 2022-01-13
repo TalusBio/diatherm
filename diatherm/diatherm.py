@@ -14,8 +14,8 @@ def create_random_methods(
     n_windows,
     charge=3,
     width=4,
-    min_mz=399,
-    max_mz=1000,
+    min_mz=395,
+    max_mz=1005,
     n_methods=1,
     file_root="diatherm",
     output_dir="diatherm-out",
@@ -145,14 +145,14 @@ def main():
     parser.add_argument(
         "--min_mz",
         type=float,
-        default=399.0,
+        default=395.0,
         help="The minimum DIA window edge m/z.",
     )
 
     parser.add_argument(
         "--max_mz",
         type=float,
-        default=1000.0,
+        default=1005.0,
         help="The maximum DIA window edge m/z.",
     )
 
