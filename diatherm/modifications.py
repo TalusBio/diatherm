@@ -36,11 +36,13 @@ def add_windows(m_over_z, charge):
         # Create the tree:
         record = ET.SubElement(mass_list, "MassListRecord")
         name = ET.SubElement(record, "CompoundName")
+        formula = ET.SubElement(record, "Formula")
         mz_element = ET.SubElement(record, "MOverZ")
         z_element = ET.SubElement(record, "Z")
 
         # Assign values:
-        name.text = f"DIA Window {idx+1}"
+        name.text = f"DIA {idx+1}"
+        formula.text = ""
         mz_element.text = str(mz_val)
         z_element.text = str(charge_val)
 

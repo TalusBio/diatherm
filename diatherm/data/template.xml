@@ -3,7 +3,7 @@
   <Modification Order="1">
     <Experiment ExperimentIndex="0">
       <TargetedInclusionMassListFilter>
-        <MassList Append="false" IntensityThreshold="false" CollisionEnergy="false" TimeMode="Unscheduled">
+        <MassList Append="true" IntensityThreshold="false" CollisionEnergy="false" TimeMode="Unscheduled">
         </MassList>
       </TargetedInclusionMassListFilter>
     </Experiment>
