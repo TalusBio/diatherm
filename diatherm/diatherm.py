@@ -73,7 +73,7 @@ def create_random_methods(
     LOGGER.info("DIA window width: %.6f m/z", width)
     LOGGER.info("Center of first window: m/z %.6f", windows[0])
     LOGGER.info("Center of last window: m/z %.6f", windows[-1])
-    LOGGER.info("Selecting %i random windows...", n_windows)
+    LOGGER.info("Selecting %i/%i random windows...", n_windows, n_total)
 
     output_files = []
     padding = len(str(int(n_methods)))
