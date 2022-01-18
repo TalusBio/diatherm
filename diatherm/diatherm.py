@@ -12,7 +12,6 @@ LOGGER = logging.getLogger(__name__)
 
 def create_random_methods(
     n_windows,
-    charge=3,
     width=4,
     min_mz=395,
     max_mz=1005,
@@ -33,9 +32,6 @@ def create_random_methods(
     ----------
     n_windows : int
         The number of random isolation windows to select.
-    charge : int or list of int, optional
-        The assumed charge state for each DIA window. If an an int,
-        the charge is used for all windows.
     width : int, optional
         The integer m/z width of the isolation windows. This is converted
         to a more precise width to avoid 'forbidden zones'
@@ -88,7 +84,7 @@ def create_random_methods(
 
         # Sample random windows:
         selected = random.sample(windows, n_windows)
-        mod_xml = modifications.add_windows(selected, charge)
+        mod_xml = modifications.add_windows(selected)
         mod_xml.write(output_file)
         output_files.append(output_file)
 
@@ -118,18 +114,6 @@ def main():
         "n_windows",
         type=int,
         help="The number fo randome isolations windows to select",
-    )
-
-    parser.add_argument(
-        "--charge",
-        type=str,
-        default="3",
-        help="""
-        The assumed precursor charge for each DIA window. If all should be the
-        same, this parameter should be an integer. Otherwise, a this should be
-        a comma separated list specifying the charge for each DIA window, such
-        as '2,3,2,2'.
-        """,
     )
 
     parser.add_argument(
@@ -184,11 +168,8 @@ def main():
     )
 
     args = parser.parse_args()
-    charge = [int(z.strip()) for z in args.charge.split(",")]
-
     output_files = create_random_methods(
         n_windows=args.n_windows,
-        charge=charge,
         width=args.width,
         min_mz=args.min_mz,
         max_mz=args.max_mz,
