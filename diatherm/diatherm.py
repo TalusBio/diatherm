@@ -1,4 +1,5 @@
 """The command line entry point for diatherm"""
+import json
 import random
 import logging
 from pathlib import Path
@@ -73,6 +74,7 @@ def create_random_methods(
 
     output_files = []
     padding = len(str(int(n_methods)))
+    summary = {"all_windows": windows}
     for idx in range(1, n_methods + 1):
         if n_methods == 1:
             suffix = ""
@@ -87,6 +89,10 @@ def create_random_methods(
         mod_xml = modifications.add_windows(selected)
         mod_xml.write(output_file)
         output_files.append(output_file)
+        summary[file_root] = selected
+
+    with (output_dir / "summary.json").open("w+") as fhdl:
+        json.dump(summary, fhdl)
 
     if n_methods == 1:
         return output_files[0]
